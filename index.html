@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Micro en vivo</title>
+<meta name="theme-color" content="#0B2654">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Poppins:wght@800&display=swap" rel="stylesheet">
+<style>
+:root{--noche:#0B2654;--mor:#762DA6;--mar:#FBF9FD;--tur:#5CD9DA;--ama:#FECE27;--rojo:#FF5A5F;--suave:#9FB0D6}
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;background:var(--noche);color:var(--mar);font-family:'DM Sans',system-ui,sans-serif;padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) 30px max(18px,env(safe-area-inset-left));display:flex;flex-direction:column;align-items:center}
+.wrap{width:100%;max-width:440px;display:flex;flex-direction:column;gap:18px}
+h1{font-family:Poppins,sans-serif;font-size:30px;line-height:1.1}
+h1 span{color:var(--ama)}
+.sub{color:var(--suave);font-size:15px;margin-top:4px}
+.boton{position:relative;width:220px;height:220px;border-radius:50%;border:0;margin:14px auto 4px;background:var(--mor);color:#fff;font:800 22px Poppins,sans-serif;cursor:pointer;display:grid;place-items:center;box-shadow:0 0 0 0 #762DA6aa;transition:background .2s,transform .1s;-webkit-tap-highlight-color:transparent}
+.boton:active{transform:scale(.97)}
+.boton.vivo{background:var(--rojo)}
+.boton .anillo{position:absolute;inset:-10px;border-radius:50%;border:6px solid var(--tur);opacity:0;transform:scale(1)}
+.boton svg{width:64px;height:64px;margin-bottom:6px}
+.boton .t{display:flex;flex-direction:column;align-items:center}
+.estado{text-align:center;font-weight:700;font-size:16px;min-height:22px}
+.estado.ok{color:var(--tur)}.estado.err{color:var(--rojo)}
+.medidor{height:16px;border-radius:9px;background:#ffffff1a;overflow:hidden}
+.medidor i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--tur),var(--ama) 70%,var(--rojo));transition:width .05s}
+.panel{background:#ffffff10;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px}
+label{font-weight:700;font-size:14px;display:flex;justify-content:space-between}
+input[type=range]{width:100%;accent-color:var(--ama)}
+select{width:100%;padding:10px;border-radius:10px;border:0;font:500 15px 'DM Sans';background:var(--mar);color:var(--noche)}
+.fila{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;font-weight:700}
+.sw{position:relative;width:46px;height:26px;flex:0 0 46px}
+.sw input{opacity:0;width:0;height:0}
+.sw b{position:absolute;inset:0;border-radius:13px;background:#ffffff33;transition:.2s}
+.sw b:before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+b{background:var(--tur)}.sw input:checked+b:before{transform:translateX(20px)}
+.lat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lat div{background:#ffffff10;border-radius:12px;padding:10px 12px;font-size:12px;color:var(--suave)}
+.lat b{display:block;font:800 22px Poppins;color:var(--mar)}
+details{background:#ffffff10;border-radius:16px;padding:14px 16px}
+summary{font-weight:700;cursor:pointer}
+details ol,details ul{padding-left:20px;margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.45;color:#dfe6f6}
+.nota{font-size:12.5px;color:var(--suave);line-height:1.45;text-align:center}
+</style></head><body>
+<div class="wrap">
+  <div><h1>Micro <span>en vivo</span></h1><p class="sub">Habla y tu voz sale por el parlante conectado al celular.</p></div>
+
+  <button class="boton" id="btn" aria-pressed="false"><span class="anillo" id="anillo"></span>
+    <span class="t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg><span id="btxt">Encender</span></span></button>
+  <p class="estado" id="estado">Toca para encender el micrófono</p>
+  <div class="medidor"><i id="nivel"></i></div>
+
+  <div class="panel">
+    <div><label>Volumen de la voz <span id="vg">150 %</span></label><input type="range" id="gan" min="0" max="400" value="150"></div>
+    <div><label>Micrófono</label><select id="mic"><option value="">El del sistema</option></select></div>
+    <div class="fila">Quitar pitido (menos retorno)<label class="sw"><input type="checkbox" id="eco"><b></b></label></div>
+    <div class="fila">Voz más clara (corta graves)<label class="sw"><input type="checkbox" id="filtro" checked><b></b></label></div>
+    <div class="lat"><div>Retraso del celular<b id="lcel">—</b></div><div>Retraso total estimado<b id="ltot">—</b></div></div>
+  </div>
+
+  <details open><summary>Cómo conectarlo</summary><ol>
+    <li>Conecta el <b>JBL Clip 5</b> por Bluetooth al celular, como si fueras a poner música.</li>
+    <li>Conecta el <b>receptor del DJI Mic Mini</b> al puerto USB-C del celular y prende el transmisor. Si no lo tienes, sirve el micrófono del celular.</li>
+    <li>Toca <b>Encender</b>, acepta el permiso del micrófono y elige el DJI en «Micrófono».</li>
+    <li>Deja la pantalla prendida mientras hablas. La página intenta mantenerla encendida sola.</li>
+  </ol></details>
+
+  <details><summary>Si pita o suena con eco</summary><ul>
+    <li>Aleja el micrófono del parlante y no lo apuntes hacia él.</li>
+    <li>Baja «Volumen de la voz» y sube el volumen del parlante.</li>
+    <li>Activa «Quitar pitido». Ayuda, pero agrega un poquito de retraso y le quita calidad a la voz.</li>
+  </ul></details>
+
+  <p class="nota">El Bluetooth siempre agrega un retraso que ninguna página puede quitar (en la mayoría de parlantes está entre 0,1 y 0,3 s). Esta página usa el camino más corto posible: sin filtros del sistema y con el audio en modo de baja latencia.</p>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let ctx,stream,src,gain,hp,comp,an,wake,raf,vivo=false;
+const BT_EST=0.2; // estimación para Bluetooth (no se puede medir desde la página)
+function estado(t,c){const e=$('estado');e.textContent=t;e.className='estado '+(c||'')}
+async function listarMics(){try{const d=(await navigator.mediaDevices.enumerateDevices()).filter(x=>x.kind==='audioinput');const s=$('mic'),v=s.value;s.innerHTML='<option value="">El del sistema</option>'+d.filter(x=>x.deviceId&&x.deviceId!=='default').map(x=>`<option value="${x.deviceId}">${x.label||'Micrófono'}</option>`).join('');s.value=v;
+ if(!v){const dji=d.find(x=>/dji|wireless|usb/i.test(x.label));if(dji&&vivo){s.value=dji.deviceId;await reiniciar()}}}catch(e){}}
+async function abrir(){
+ const eco=$('eco').checked;
+ stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:$('mic').value?{exact:$('mic').value}:undefined,echoCancellation:eco,noiseSuppression:eco,autoGainControl:false,latency:0,channelCount:1}});
+ if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:0});}
+ if(ctx.state!=='running')await ctx.resume();
+ src=ctx.createMediaStreamSource(stream);
+ gain=gain||ctx.createGain();gain.gain.value=$('gan').value/100;
+ hp=hp||Object.assign(ctx.createBiquadFilter(),{type:'highpass'});hp.frequency.value=$('filtro').checked?110:10;
+ comp=comp||ctx.createDynamicsCompressor();comp.threshold.value=-10;comp.knee.value=6;comp.ratio.value=8;comp.attack.value=0.002;comp.release.value=0.1;
+ an=an||Object.assign(ctx.createAnalyser(),{fftSize:512});
+ src.connect(hp);hp.connect(gain);gain.connect(comp);comp.connect(ctx.destination);gain.connect(an);
+ const lc=(ctx.baseLatency||0)+(ctx.outputLatency||0);
+ $('lcel').textContent=lc?Math.round(lc*1000)+' ms':'≈10 ms';
+ $('ltot').textContent='≈'+Math.round((lc+BT_EST)*1000)+' ms';
+ const tr=stream.getAudioTracks()[0];estado('En vivo · '+(tr.label||'micrófono'),'ok');
+}
+function cerrar(){try{src&&src.disconnect()}catch(e){}if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}
+async function reiniciar(){if(!vivo)return;cerrar();try{await abrir()}catch(e){fallo(e)}}
+function medir(){const a=new Float32Array(an.fftSize);an.getFloatTimeDomainData(a);let p=0;for(const x of a)p=Math.max(p,Math.abs(x));$('nivel').style.width=Math.min(100,p*100)+'%';
+ const k=1+Math.min(.12,p*.25);$('anillo').style.opacity=Math.min(1,p*3);$('anillo').style.transform=`scale(${k})`;if(!(medir.n=(medir.n||0)+1)%30){const lc=(ctx.baseLatency||0)+(ctx.outputLatency||0);if(lc){$('lcel').textContent=Math.round(lc*1000)+' ms';$('ltot').textContent='≈'+Math.round((lc+BT_EST)*1000)+' ms'}}raf=requestAnimationFrame(medir)}
+function fallo(e){console.error(e);vivo=false;ui();estado(e&&e.name==='NotAllowedError'?'Diste «no» al permiso. Actívalo en el candado de la barra de dirección.':'No se pudo abrir el micrófono: '+(e.message||e),'err')}
+function ui(){$('btn').classList.toggle('vivo',vivo);$('btn').setAttribute('aria-pressed',vivo);$('btxt').textContent=vivo?'Apagar':'Encender'}
+$('btn').onclick=async()=>{
+ if(vivo){vivo=false;cerrar();cancelAnimationFrame(raf);$('nivel').style.width=0;$('anillo').style.opacity=0;try{wake&&wake.release()}catch(e){}ui();estado('Apagado');return}
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){estado('Este navegador no deja usar el micrófono. Abre la página en Chrome o Safari.','err');return}
+ vivo=true;ui();estado('Pidiendo permiso…');
+ try{await abrir();await listarMics();medir();try{wake=await navigator.wakeLock.request('screen')}catch(e){}}catch(e){fallo(e)}
+};
+$('gan').oninput=e=>{$('vg').textContent=e.target.value+' %';if(gain)gain.gain.setTargetAtTime(e.target.value/100,ctx.currentTime,.01)};
+$('filtro').onchange=e=>{if(hp)hp.frequency.value=e.target.checked?110:10};
+$('eco').onchange=reiniciar;$('mic').onchange=reiniciar;
+navigator.mediaDevices&&navigator.mediaDevices.addEventListener&&navigator.mediaDevices.addEventListener('devicechange',listarMics);
+document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'&&vivo){try{ctx.state!=='running'&&await ctx.resume();wake=await navigator.wakeLock.request('screen')}catch(e){}}});
+</script>
+</body></html>
