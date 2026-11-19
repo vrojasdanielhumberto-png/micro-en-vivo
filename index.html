@@ -97,7 +97,7 @@ async function abrir(){
 function cerrar(){try{src&&src.disconnect()}catch(e){}if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}
 async function reiniciar(){if(!vivo)return;cerrar();try{await abrir()}catch(e){fallo(e)}}
 function medir(){const a=new Float32Array(an.fftSize);an.getFloatTimeDomainData(a);let p=0;for(const x of a)p=Math.max(p,Math.abs(x));$('nivel').style.width=Math.min(100,p*100)+'%';
- const k=1+Math.min(.12,p*.25);$('anillo').style.opacity=Math.min(1,p*3);$('anillo').style.transform=`scale(${k})`;if(!(medir.n=(medir.n||0)+1)%30){const lc=(ctx.baseLatency||0)+(ctx.outputLatency||0);if(lc){$('lcel').textContent=Math.round(lc*1000)+' ms';$('ltot').textContent='≈'+Math.round((lc+BT_EST)*1000)+' ms'}}raf=requestAnimationFrame(medir)}
+ const k=1+Math.min(.12,p*.25);$('anillo').style.opacity=Math.min(1,p*3);$('anillo').style.transform=`scale(${k})`;if((medir.n=(medir.n||0)+1)%30===0){const lc=(ctx.baseLatency||0)+(ctx.outputLatency||0);if(lc){$('lcel').textContent=Math.round(lc*1000)+' ms';$('ltot').textContent='≈'+Math.round((lc+BT_EST)*1000)+' ms'}}raf=requestAnimationFrame(medir)}
 function fallo(e){console.error(e);vivo=false;ui();estado(e&&e.name==='NotAllowedError'?'Diste «no» al permiso. Actívalo en el candado de la barra de dirección.':'No se pudo abrir el micrófono: '+(e.message||e),'err')}
 function ui(){$('btn').classList.toggle('vivo',vivo);$('btn').setAttribute('aria-pressed',vivo);$('btxt').textContent=vivo?'Apagar':'Encender'}
 $('btn').onclick=async()=>{
