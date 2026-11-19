@@ -38,6 +38,8 @@ select{width:100%;padding:10px;border-radius:10px;border:0;font:500 15px 'DM San
 details{background:#ffffff10;border-radius:16px;padding:14px 16px}
 summary{font-weight:700;cursor:pointer}
 details ol,details ul{padding-left:20px;margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.45;color:#dfe6f6}
+.prueba{width:100%;padding:12px;border:0;border-radius:12px;background:var(--ama);color:var(--noche);font:700 15px 'DM Sans';cursor:pointer}
+.diag{font-size:13px;color:var(--tur);font-weight:700;line-height:1.4}
 .nota{font-size:12.5px;color:var(--suave);line-height:1.45;text-align:center}
 </style></head><body>
 <div class="wrap">
@@ -53,6 +55,9 @@ details ol,details ul{padding-left:20px;margin-top:10px;display:flex;flex-direct
     <div><label>Micrófono</label><select id="mic"><option value="">El del sistema</option></select></div>
     <div class="fila">Quitar pitido (menos retorno)<label class="sw"><input type="checkbox" id="eco"><b></b></label></div>
     <div class="fila">Voz más clara (corta graves)<label class="sw"><input type="checkbox" id="filtro" checked><b></b></label></div>
+    <div class="fila">Salida alterna (si no suena)<label class="sw"><input type="checkbox" id="alt"><b></b></label></div>
+    <button class="prueba" id="prueba" type="button">🔊 Probar parlante (pito de 1 s)</button>
+    <p class="diag" id="diag">Audio: sin encender</p>
     <div class="lat"><div>Retraso del celular<b id="lcel">—</b></div><div>Retraso total estimado<b id="ltot">—</b></div></div>
   </div>
 
@@ -63,6 +68,12 @@ details ol,details ul{padding-left:20px;margin-top:10px;display:flex;flex-direct
     <li>Deja la pantalla prendida mientras hablas. La página intenta mantenerla encendida sola.</li>
   </ol></details>
 
+  <details open><summary>Si no suena por el parlante</summary><ol>
+    <li>Toca <b>Probar parlante</b>. Si el pito no sale por el JBL, activa <b>Salida alterna</b> y vuelve a probar.</li>
+    <li>Si el pito suena pero tu voz no, mira la línea verde: si dice «sin señal», el navegador no está oyendo el micrófono; elige otro en «Micrófono».</li>
+    <li>Sube el volumen del celular <b>mientras</b> el micro está encendido (en llamadas y en música son volúmenes distintos).</li>
+    <li>Abre el link en <b>Chrome</b> (Android) o <b>Safari</b> (iPhone), no dentro de WhatsApp.</li>
+  </ol></details>
   <details><summary>Si pita o suena con eco</summary><ul>
     <li>Aleja el micrófono del parlante y no lo apuntes hacia él.</li>
     <li>Baja «Volumen de la voz» y sube el volumen del parlante.</li>
@@ -73,22 +84,24 @@ details ol,details ul{padding-left:20px;margin-top:10px;display:flex;flex-direct
 </div>
 <script>
 const $=id=>document.getElementById(id);
-let ctx,stream,src,gain,hp,comp,an,wake,raf,vivo=false;
+let ctx,dest,stream,src,gain,hp,comp,an,wake,raf,vivo=false;const sal=new Audio();sal.autoplay=true;sal.setAttribute('playsinline','');
 const BT_EST=0.2; // estimación para Bluetooth (no se puede medir desde la página)
 function estado(t,c){const e=$('estado');e.textContent=t;e.className='estado '+(c||'')}
 async function listarMics(){try{const d=(await navigator.mediaDevices.enumerateDevices()).filter(x=>x.kind==='audioinput');const s=$('mic'),v=s.value;s.innerHTML='<option value="">El del sistema</option>'+d.filter(x=>x.deviceId&&x.deviceId!=='default').map(x=>`<option value="${x.deviceId}">${x.label||'Micrófono'}</option>`).join('');s.value=v;
  if(!v){const dji=d.find(x=>/dji|wireless|usb/i.test(x.label));if(dji&&vivo){s.value=dji.deviceId;await reiniciar()}}}catch(e){}}
+function asegurarCtx(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});dest=ctx.createMediaStreamDestination();}if(ctx.state!=='running'){ctx.resume().catch(()=>{})}
+ try{if(navigator.audioSession)navigator.audioSession.type='play-and-record'}catch(e){}}
+function salida(){try{comp.disconnect()}catch(e){}if($('alt').checked){comp.connect(dest);sal.srcObject=dest.stream;sal.play().catch(()=>{})}else{comp.connect(ctx.destination);sal.pause();sal.srcObject=null}}
 async function abrir(){
  const eco=$('eco').checked;
  stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:$('mic').value?{exact:$('mic').value}:undefined,echoCancellation:eco,noiseSuppression:eco,autoGainControl:false,latency:0,channelCount:1}});
- if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:0});}
- if(ctx.state!=='running')await ctx.resume();
+ asegurarCtx(); if(ctx.state!=='running'){try{await ctx.resume()}catch(e){}}
  src=ctx.createMediaStreamSource(stream);
  gain=gain||ctx.createGain();gain.gain.value=$('gan').value/100;
  hp=hp||Object.assign(ctx.createBiquadFilter(),{type:'highpass'});hp.frequency.value=$('filtro').checked?110:10;
  comp=comp||ctx.createDynamicsCompressor();comp.threshold.value=-10;comp.knee.value=6;comp.ratio.value=8;comp.attack.value=0.002;comp.release.value=0.1;
  an=an||Object.assign(ctx.createAnalyser(),{fftSize:512});
- src.connect(hp);hp.connect(gain);gain.connect(comp);comp.connect(ctx.destination);gain.connect(an);
+ src.connect(hp);hp.connect(gain);gain.connect(comp);gain.connect(an);salida();
  const lc=(ctx.baseLatency||0)+(ctx.outputLatency||0);
  $('lcel').textContent=lc?Math.round(lc*1000)+' ms':'≈10 ms';
  $('ltot').textContent='≈'+Math.round((lc+BT_EST)*1000)+' ms';
@@ -96,18 +109,20 @@ async function abrir(){
 }
 function cerrar(){try{src&&src.disconnect()}catch(e){}if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}
 async function reiniciar(){if(!vivo)return;cerrar();try{await abrir()}catch(e){fallo(e)}}
-function medir(){const a=new Float32Array(an.fftSize);an.getFloatTimeDomainData(a);let p=0;for(const x of a)p=Math.max(p,Math.abs(x));$('nivel').style.width=Math.min(100,p*100)+'%';
+function medir(){const a=new Float32Array(an.fftSize);an.getFloatTimeDomainData(a);let p=0;for(const x of a)p=Math.max(p,Math.abs(x));$('nivel').style.width=Math.min(100,p*100)+'%';if(p>.02)medir.oido=1;if((medir.n||0)%15===0&&Date.now()>(medir.fijo||0))$('diag').textContent='Audio: '+(ctx.state==='running'?'activo':'pausado ('+ctx.state+')')+' · Micrófono: '+(medir.oido?'te está oyendo':'sin señal todavía')+' · Salida: '+($('alt').checked?'alterna':'normal');
  const k=1+Math.min(.12,p*.25);$('anillo').style.opacity=Math.min(1,p*3);$('anillo').style.transform=`scale(${k})`;if((medir.n=(medir.n||0)+1)%30===0){const lc=(ctx.baseLatency||0)+(ctx.outputLatency||0);if(lc){$('lcel').textContent=Math.round(lc*1000)+' ms';$('ltot').textContent='≈'+Math.round((lc+BT_EST)*1000)+' ms'}}raf=requestAnimationFrame(medir)}
 function fallo(e){console.error(e);vivo=false;ui();estado(e&&e.name==='NotAllowedError'?'Diste «no» al permiso. Actívalo en el candado de la barra de dirección.':'No se pudo abrir el micrófono: '+(e.message||e),'err')}
 function ui(){$('btn').classList.toggle('vivo',vivo);$('btn').setAttribute('aria-pressed',vivo);$('btxt').textContent=vivo?'Apagar':'Encender'}
 $('btn').onclick=async()=>{
  if(vivo){vivo=false;cerrar();cancelAnimationFrame(raf);$('nivel').style.width=0;$('anillo').style.opacity=0;try{wake&&wake.release()}catch(e){}ui();estado('Apagado');return}
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){estado('Este navegador no deja usar el micrófono. Abre la página en Chrome o Safari.','err');return}
- vivo=true;ui();estado('Pidiendo permiso…');
+ asegurarCtx();sal.play().catch(()=>{});vivo=true;ui();estado('Pidiendo permiso…');
  try{await abrir();await listarMics();medir();try{wake=await navigator.wakeLock.request('screen')}catch(e){}}catch(e){fallo(e)}
 };
 $('gan').oninput=e=>{$('vg').textContent=e.target.value+' %';if(gain)gain.gain.setTargetAtTime(e.target.value/100,ctx.currentTime,.01)};
 $('filtro').onchange=e=>{if(hp)hp.frequency.value=e.target.checked?110:10};
+$('alt').onchange=()=>{if(comp&&vivo)salida()};
+$('prueba').onclick=async()=>{asegurarCtx();try{await ctx.resume()}catch(e){}const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=660;g.gain.value=.25;o.connect(g);if($('alt').checked){g.connect(dest);sal.srcObject=dest.stream;sal.play().catch(()=>{})}else g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+1);medir.fijo=Date.now()+4000;$('diag').textContent='Sonó el pito por la salida '+($('alt').checked?'alterna':'normal')+'. Si no lo oíste en el parlante, prueba la otra salida.'};
 $('eco').onchange=reiniciar;$('mic').onchange=reiniciar;
 navigator.mediaDevices&&navigator.mediaDevices.addEventListener&&navigator.mediaDevices.addEventListener('devicechange',listarMics);
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState==='visible'&&vivo){try{ctx.state!=='running'&&await ctx.resume();wake=await navigator.wakeLock.request('screen')}catch(e){}}});
